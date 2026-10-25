@@ -1,7 +1,8 @@
 {
-  "name": "Book Register",
-  "short_name": "Books",
-  "description": "Keep track of the books you lend to friends and family.",
+  "name": "Registre des livres",
+  "short_name": "Livres",
+  "description": "Gardez une trace des livres prêtés à vos amis et à votre famille.",
+  "lang": "fr",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

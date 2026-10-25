@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Book Register</title>
+<title>Registre des livres</title>
 <meta name="theme-color" content="#6b3f22">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Book Register">
+<meta name="apple-mobile-web-app-title" content="Livres">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -27,9 +27,9 @@
   html, body { margin: 0; background: var(--bg); color: var(--ink);
     font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   header { position: sticky; top: 0; z-index: 5; background: var(--accent); color: #fff;
-    padding: calc(env(safe-area-inset-top) + 12px) 16px 12px; }
+    padding: calc(env(safe-area-inset-top) + 12px) 16px 12px; cursor: pointer; }
   @media (prefers-color-scheme: dark) { header { background: #3a2617; } }
-  header h1 { margin: 0; font: 600 1.25rem/1.2 Georgia, "Times New Roman", serif; letter-spacing: .02em; }
+  header h1 { margin: 0; font: 600 1.25rem/1.2 Georgia, "Times New Roman", serif; letter-spacing: .02em; overflow-wrap: anywhere; }
   header p { margin: 2px 0 0; font-size: .85rem; opacity: .85; }
   main { max-width: 760px; margin: 0 auto; padding: 12px 12px 120px; }
   section[hidden] { display: none; }
@@ -83,6 +83,8 @@
   .panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
   .panel p { margin: 0 0 10px; color: var(--muted); font-size: .92rem; }
   .panel .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .panel.welcome { border-color: var(--accent); }
+  .panel.welcome p { color: var(--ink); }
   #toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 150px); transform: translateX(-50%);
     background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: .9rem;
     opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 20; }
@@ -90,127 +92,150 @@
 </style>
 </head>
 <body>
-<header>
-  <h1>📚 Book Register</h1>
+<header id="header" title="Modifier le nom du propriétaire">
+  <h1 id="heading">📚 Registre des livres</h1>
   <p id="summary"></p>
 </header>
 
 <main>
   <section id="view-loans">
+    <div class="panel welcome" id="welcome" hidden>
+      <p><b>Bienvenue !</b> À qui appartient ce registre ? Votre nom s'affichera en haut de l'application et dans vos sauvegardes.</p>
+      <div class="btns"><button class="btn" data-owner>Indiquer mon nom</button></div>
+    </div>
     <div class="stats" id="stats"></div>
-    <h2>Currently lent out</h2>
+    <h2>Actuellement prêtés</h2>
     <div id="loans-list"></div>
   </section>
 
   <section id="view-books" hidden>
-    <input class="search" id="books-search" type="search" placeholder="Search books by title or author…">
+    <input class="search" id="books-search" type="search" placeholder="Rechercher un titre ou un auteur…">
     <div id="books-list"></div>
   </section>
 
   <section id="view-history" hidden>
-    <input class="search" id="history-search" type="search" placeholder="Search by book or person…">
+    <input class="search" id="history-search" type="search" placeholder="Rechercher un livre ou une personne…">
     <div id="history-list"></div>
   </section>
 
-  <section id="view-backup" hidden>
-    <h2>Backup &amp; move data</h2>
+  <section id="view-settings" hidden>
+    <h2>Propriétaire du registre</h2>
     <div class="panel">
-      <p>Your records are saved only on this device, inside this browser. Export a backup file from time to time,
-         and use it to copy your records between your phone and your PC.</p>
+      <p id="owner-info"></p>
+      <div class="btns"><button class="btn" data-owner>Modifier le nom</button></div>
+    </div>
+    <h2>Sauvegarde et transfert</h2>
+    <div class="panel">
+      <p>Vos fiches sont enregistrées uniquement sur cet appareil, dans ce navigateur. Exportez une sauvegarde de temps en temps,
+         et utilisez-la pour copier vos fiches entre votre téléphone et votre ordinateur.</p>
       <div class="btns">
-        <button class="btn" id="export-json">Export backup</button>
-        <button class="btn ghost" id="export-csv">Export history as spreadsheet (CSV)</button>
+        <button class="btn" id="export-json">Exporter une sauvegarde</button>
+        <button class="btn ghost" id="export-csv">Exporter l'historique en tableur (CSV)</button>
       </div>
     </div>
     <div class="panel">
-      <p><b>Merge</b> adds the records from a backup file to the ones already here; where the same record is in both,
-         the most recently changed version is kept. <b>Replace</b> wipes this device and loads the file instead.</p>
+      <p><b>Fusionner</b> ajoute les fiches d'un fichier de sauvegarde à celles déjà présentes ; si une même fiche existe des deux côtés,
+         la version modifiée le plus récemment est conservée. <b>Remplacer</b> efface cet appareil et charge le fichier à la place.</p>
       <div class="btns">
-        <button class="btn" id="import-merge">Merge from file</button>
-        <button class="btn danger" id="import-replace">Replace from file</button>
+        <button class="btn" id="import-merge">Fusionner depuis un fichier</button>
+        <button class="btn danger" id="import-replace">Remplacer depuis un fichier</button>
       </div>
       <input type="file" id="import-file" accept="application/json,.json" hidden>
     </div>
     <div class="panel">
-      <p id="storage-info">Checking storage…</p>
+      <p id="storage-info">Vérification du stockage…</p>
     </div>
   </section>
 </main>
 
-<button id="fab" aria-label="Add">+</button>
+<button id="fab" aria-label="Ajouter">+</button>
 
 <nav>
-  <button data-view="loans" aria-current="true"><span class="ico">📖</span>On loan</button>
-  <button data-view="books"><span class="ico">📚</span>Books</button>
-  <button data-view="history"><span class="ico">🕘</span>History</button>
-  <button data-view="backup"><span class="ico">💾</span>Backup</button>
+  <button data-view="loans" aria-current="true"><span class="ico">📖</span>En prêt</button>
+  <button data-view="books"><span class="ico">📚</span>Livres</button>
+  <button data-view="history"><span class="ico">🕘</span>Historique</button>
+  <button data-view="settings"><span class="ico">⚙️</span>Réglages</button>
 </nav>
 
-<!-- Add / edit a book -->
-<dialog id="dlg-book">
+<!-- Propriétaire -->
+<dialog id="dlg-owner">
   <form method="dialog">
-    <h3 id="book-dlg-title">Add a book</h3>
-    <label for="b-title">Title *</label>
-    <input id="b-title" required autocomplete="off">
-    <label for="b-author">Author</label>
-    <input id="b-author" autocomplete="off">
-    <label for="b-notes">Notes (edition, condition, where it came from…)</label>
-    <textarea id="b-notes"></textarea>
+    <h3>Propriétaire du registre</h3>
+    <label for="o-name">Votre nom</label>
+    <input id="o-name" autocomplete="name" placeholder="ex. : Hamza">
+    <p class="sub">Laissez vide pour ne pas afficher de nom.</p>
     <div class="dlg-actions">
-      <button type="button" class="btn danger" id="b-delete" hidden>Delete</button>
-      <span class="spacer"></span>
-      <button type="button" class="btn ghost" data-close>Cancel</button>
-      <button type="submit" class="btn" value="save">Save</button>
+      <button type="button" class="btn ghost" data-close>Annuler</button>
+      <button type="submit" class="btn" value="save">Enregistrer</button>
     </div>
   </form>
 </dialog>
 
-<!-- Lend a book / edit a loan record -->
+<!-- Ajouter / modifier un livre -->
+<dialog id="dlg-book">
+  <form method="dialog">
+    <h3 id="book-dlg-title">Ajouter un livre</h3>
+    <label for="b-title">Titre *</label>
+    <input id="b-title" required autocomplete="off">
+    <label for="b-author">Auteur</label>
+    <input id="b-author" autocomplete="off">
+    <label for="b-notes">Notes (édition, état, provenance…)</label>
+    <textarea id="b-notes"></textarea>
+    <div class="dlg-actions">
+      <button type="button" class="btn danger" id="b-delete" hidden>Supprimer</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn ghost" data-close>Annuler</button>
+      <button type="submit" class="btn" value="save">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Prêter un livre / modifier une fiche de prêt -->
 <dialog id="dlg-loan">
   <form method="dialog">
-    <h3 id="loan-dlg-title">Lend a book</h3>
-    <label for="l-book">Book *</label>
+    <h3 id="loan-dlg-title">Prêter un livre</h3>
+    <label for="l-book">Livre *</label>
     <select id="l-book" required></select>
     <div id="l-newbook" hidden>
-      <label for="l-newtitle">New book title *</label>
+      <label for="l-newtitle">Titre du nouveau livre *</label>
       <input id="l-newtitle" autocomplete="off">
-      <label for="l-newauthor">Author</label>
+      <label for="l-newauthor">Auteur</label>
       <input id="l-newauthor" autocomplete="off">
     </div>
-    <label for="l-person">Who is taking it? *</label>
+    <label for="l-person">Qui l'emprunte ? *</label>
     <input id="l-person" list="people" required autocomplete="off">
     <datalist id="people"></datalist>
     <div class="row">
-      <div><label for="l-out">Date taken *</label><input id="l-out" type="date" required></div>
-      <div><label for="l-due">Expected back (optional)</label><input id="l-due" type="date"></div>
+      <div><label for="l-out">Date d'emprunt *</label><input id="l-out" type="date" required></div>
+      <div><label for="l-due">Retour prévu (facultatif)</label><input id="l-due" type="date"></div>
     </div>
     <div id="l-returned-wrap" hidden>
-      <label for="l-returned">Date given back (leave empty if still out)</label>
+      <label for="l-returned">Date de retour (laisser vide s'il n'est pas encore rendu)</label>
       <input id="l-returned" type="date">
     </div>
     <label for="l-notes">Notes</label>
     <textarea id="l-notes"></textarea>
     <div class="dlg-actions">
-      <button type="button" class="btn danger" id="l-delete" hidden>Delete record</button>
+      <button type="button" class="btn danger" id="l-delete" hidden>Supprimer la fiche</button>
       <span class="spacer"></span>
-      <button type="button" class="btn ghost" data-close>Cancel</button>
-      <button type="submit" class="btn" value="save">Save</button>
+      <button type="button" class="btn ghost" data-close>Annuler</button>
+      <button type="submit" class="btn" value="save">Enregistrer</button>
     </div>
   </form>
 </dialog>
 
-<!-- Mark as returned -->
+<!-- Marquer comme rendu -->
 <dialog id="dlg-return">
   <form method="dialog">
-    <h3>Book returned</h3>
+    <h3>Livre rendu</h3>
     <p id="r-desc" class="sub"></p>
-    <label for="r-date">Date given back *</label>
+    <label for="r-date">Date de retour *</label>
     <input id="r-date" type="date" required>
-    <label for="r-notes">Notes (condition, etc.)</label>
+    <label for="r-notes">Notes (état, etc.)</label>
     <textarea id="r-notes"></textarea>
     <div class="dlg-actions">
-      <button type="button" class="btn ghost" data-close>Cancel</button>
-      <button type="submit" class="btn" value="save">Mark returned</button>
+      <button type="button" class="btn ghost" data-close>Annuler</button>
+      <button type="submit" class="btn" value="save">Marquer comme rendu</button>
     </div>
   </form>
 </dialog>
@@ -222,13 +247,13 @@
 const KEY = 'book-register-v1';
 const $ = (s) => document.querySelector(s);
 
-// ---------- data ----------
+// ---------- données ----------
 function load() {
   try {
     const d = JSON.parse(localStorage.getItem(KEY));
-    if (d && Array.isArray(d.books) && Array.isArray(d.loans)) return d;
+    if (d && Array.isArray(d.books) && Array.isArray(d.loans)) return { owner: '', ...d };
   } catch (e) {}
-  return { books: [], loans: [] };
+  return { owner: '', books: [], loans: [] };
 }
 let db = load();
 function save() { localStorage.setItem(KEY, JSON.stringify(db)); render(); }
@@ -240,13 +265,16 @@ const today = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const fmt = (d) => d ? new Date(d + 'T00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+const fmt = (d) => d ? new Date(d + 'T00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 const days = (a, b) => Math.round((new Date(b + 'T00:00') - new Date(a + 'T00:00')) / 864e5);
-const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+// En français, 0 et 1 sont au singulier.
+const plural = (n, one, many = one + 's') => `${n} ${n > 1 ? many : one}`;
 const bookById = (id) => db.books.find((b) => b.id === id);
 const activeLoan = (bookId) => db.loans.find((l) => l.bookId === bookId && !l.returned);
-const people = () => [...new Set(db.loans.map((l) => l.person))].sort((a, b) => a.localeCompare(b));
-const byTitle = (a, b) => a.title.localeCompare(b.title);
+const people = () => [...new Set(db.loans.map((l) => l.person))].sort((a, b) => a.localeCompare(b, 'fr'));
+const byTitle = (a, b) => a.title.localeCompare(b.title, 'fr');
+// « de Marc » mais « d'Anne »
+const deName = (name) => (/^[aeiouyàâäéèêëîïôöùûü]/i.test(name) ? "d'" : 'de ') + name;
 
 function toast(msg) {
   const t = $('#toast');
@@ -264,40 +292,45 @@ document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click
   window.scrollTo(0, 0);
 }));
 $('#fab').addEventListener('click', () => view === 'books' ? openBook() : openLoan());
+$('#header').addEventListener('click', openOwner);
 document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
 $('#books-search').addEventListener('input', render);
 $('#history-search').addEventListener('input', render);
 
-// ---------- rendering ----------
+// ---------- affichage ----------
 function loanStatus(l) {
-  if (l.returned) return `<span class="badge ok">Returned</span>`;
-  if (l.due && l.due < today()) return `<span class="badge bad">Overdue ${plural(days(l.due, today()), 'day')}</span>`;
-  return `<span class="badge warn">Out ${plural(days(l.out, today()), 'day')}</span>`;
+  if (l.returned) return `<span class="badge ok">Rendu</span>`;
+  if (l.due && l.due < today()) return `<span class="badge bad">En retard de ${plural(days(l.due, today()), 'jour')}</span>`;
+  return `<span class="badge warn">Prêté depuis ${plural(days(l.out, today()), 'jour')}</span>`;
 }
 
 function render() {
   const out = db.loans.filter((l) => !l.returned);
   const overdue = out.filter((l) => l.due && l.due < today());
-  $('#summary').textContent = `${plural(db.books.length, 'book')} · ${out.length} lent out` + (overdue.length ? ` · ${overdue.length} overdue` : '');
-  $('#fab').hidden = view === 'backup';
+  const heading = db.owner ? `Bibliothèque ${deName(db.owner)}` : 'Registre des livres';
+  $('#heading').textContent = '📚 ' + heading;
+  document.title = heading;
+  $('#summary').textContent = `${plural(db.books.length, 'livre')} · ${plural(out.length, 'prêté')}` + (overdue.length ? ` · ${overdue.length} en retard` : '');
+  $('#fab').hidden = view === 'settings';
 
   if (view === 'loans') {
+    $('#welcome').hidden = !!db.owner;
     $('#stats').innerHTML = `
-      <div class="stat"><b>${db.books.length - out.length}</b><span>on the shelf</span></div>
-      <div class="stat"><b>${out.length}</b><span>lent out</span></div>
-      <div class="stat"><b>${people().length}</b><span>borrowers</span></div>`;
+      <div class="stat"><b>${db.books.length - out.length}</b><span>sur l'étagère</span></div>
+      <div class="stat"><b>${out.length}</b><span>${out.length > 1 ? 'prêtés' : 'prêté'}</span></div>
+      <div class="stat"><b>${people().length}</b><span>${people().length > 1 ? 'emprunteurs' : 'emprunteur'}</span></div>`;
     const list = out.slice().sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999') || a.out.localeCompare(b.out));
     $('#loans-list').innerHTML = list.length ? list.map((l) => {
-      const b = bookById(l.bookId) || { title: '(deleted book)' };
+      const b = bookById(l.bookId) || { title: '(livre supprimé)' };
       return `<div class="card">
         <div class="info">
           <div class="title">${esc(b.title)}</div>
           ${b.author ? `<div class="sub">${esc(b.author)}</div>` : ''}
-          <div class="meta">${loanStatus(l)}<b>${esc(l.person)}</b> since ${fmt(l.out)}${l.due ? ` · back by ${fmt(l.due)}` : ''}</div>
+          <div class="meta">${loanStatus(l)}<b>${esc(l.person)}</b> depuis le ${fmt(l.out)}${l.due ? ` · retour prévu le ${fmt(l.due)}` : ''}</div>
         </div>
-        <div class="actions"><button class="btn" data-return="${l.id}">Returned</button></div>
+        <div class="actions"><button class="btn" data-return="${l.id}">Rendu</button></div>
       </div>`;
-    }).join('') : `<div class="empty">No books are lent out right now.<br>Tap <b>+</b> to record a loan.</div>`;
+    }).join('') : `<div class="empty">Aucun livre n'est prêté en ce moment.<br>Touchez <b>+</b> pour enregistrer un prêt.</div>`;
   }
 
   if (view === 'books') {
@@ -310,15 +343,15 @@ function render() {
         <div class="info">
           <div class="title">${esc(b.title)}</div>
           ${b.author ? `<div class="sub">${esc(b.author)}</div>` : ''}
-          <div class="meta">${l ? `${loanStatus(l)}with <b>${esc(l.person)}</b>` : `<span class="badge ok">On the shelf</span>`}
-            <span class="sub">${count ? `· lent ${plural(count, 'time')}` : ''}</span></div>
+          <div class="meta">${l ? `${loanStatus(l)}chez <b>${esc(l.person)}</b>` : `<span class="badge ok">Sur l'étagère</span>`}
+            <span class="sub">${count ? `· prêté ${count} fois` : ''}</span></div>
         </div>
         <div class="actions">
-          ${l ? `<button class="btn" data-return="${l.id}">Returned</button>` : `<button class="btn" data-lend="${b.id}">Lend</button>`}
-          <button class="btn ghost" data-edit-book="${b.id}">Edit</button>
+          ${l ? `<button class="btn" data-return="${l.id}">Rendu</button>` : `<button class="btn" data-lend="${b.id}">Prêter</button>`}
+          <button class="btn ghost" data-edit-book="${b.id}">Modifier</button>
         </div>
       </div>`;
-    }).join('') : `<div class="empty">${q ? 'No matching books.' : 'Your shelf is empty.<br>Tap <b>+</b> to add your first book.'}</div>`;
+    }).join('') : `<div class="empty">${q ? 'Aucun livre trouvé.' : 'Votre étagère est vide.<br>Touchez <b>+</b> pour ajouter votre premier livre.'}</div>`;
   }
 
   if (view === 'history') {
@@ -328,8 +361,8 @@ function render() {
       return !q || [b.title, b.author, l.person].join(' ').toLowerCase().includes(q);
     }).sort((a, b) => b.out.localeCompare(a.out));
     $('#history-list').innerHTML = list.length ? list.map((l) => {
-      const b = bookById(l.bookId) || { title: '(deleted book)' };
-      const span = l.returned ? ` → ${fmt(l.returned)} (${plural(days(l.out, l.returned), 'day')})` : ' → still out';
+      const b = bookById(l.bookId) || { title: '(livre supprimé)' };
+      const span = l.returned ? ` → ${fmt(l.returned)} (${plural(days(l.out, l.returned), 'jour')})` : ' → pas encore rendu';
       return `<div class="card">
         <div class="info">
           <div class="title">${esc(b.title)}</div>
@@ -337,12 +370,17 @@ function render() {
           <div class="sub">${fmt(l.out)}${span}</div>
           ${l.notes ? `<div class="sub">📝 ${esc(l.notes)}</div>` : ''}
         </div>
-        <div class="actions"><button class="btn ghost" data-edit-loan="${l.id}">Edit</button></div>
+        <div class="actions"><button class="btn ghost" data-edit-loan="${l.id}">Modifier</button></div>
       </div>`;
-    }).join('') : `<div class="empty">${q ? 'No matching records.' : 'No loans recorded yet.'}</div>`;
+    }).join('') : `<div class="empty">${q ? 'Aucune fiche trouvée.' : "Aucun prêt enregistré pour l'instant."}</div>`;
   }
 
-  if (view === 'backup') showStorageInfo();
+  if (view === 'settings') {
+    $('#owner-info').innerHTML = db.owner
+      ? `Ce registre appartient à <b>${esc(db.owner)}</b>.`
+      : "Aucun nom n'est indiqué pour l'instant.";
+    showStorageInfo();
+  }
 }
 
 document.body.addEventListener('click', (e) => {
@@ -352,13 +390,25 @@ document.body.addEventListener('click', (e) => {
   else if (t.dataset.lend) openLoan(null, t.dataset.lend);
   else if (t.dataset.editBook) openBook(t.dataset.editBook);
   else if (t.dataset.editLoan) openLoan(t.dataset.editLoan);
+  else if ('owner' in t.dataset) openOwner();
 });
 
-// ---------- book dialog ----------
+// ---------- propriétaire ----------
+function openOwner() {
+  $('#o-name').value = db.owner || '';
+  $('#dlg-owner').showModal();
+}
+$('#dlg-owner form').addEventListener('submit', () => {
+  db.owner = $('#o-name').value.trim();
+  db.ownerUpdated = now();
+  save(); toast(db.owner ? 'Nom enregistré' : 'Nom retiré');
+});
+
+// ---------- fenêtre livre ----------
 let editingBook = null;
 function openBook(id) {
   editingBook = id ? bookById(id) : null;
-  $('#book-dlg-title').textContent = editingBook ? 'Edit book' : 'Add a book';
+  $('#book-dlg-title').textContent = editingBook ? 'Modifier le livre' : 'Ajouter un livre';
   $('#b-title').value = editingBook?.title || '';
   $('#b-author').value = editingBook?.author || '';
   $('#b-notes').value = editingBook?.notes || '';
@@ -370,29 +420,29 @@ $('#dlg-book form').addEventListener('submit', () => {
   if (!data.title) return;
   if (editingBook) Object.assign(editingBook, data);
   else db.books.push({ id: uid(), added: today(), ...data });
-  save(); toast(editingBook ? 'Book updated' : 'Book added');
+  save(); toast(editingBook ? 'Livre modifié' : 'Livre ajouté');
 });
 $('#b-delete').addEventListener('click', () => {
   const n = db.loans.filter((l) => l.bookId === editingBook.id).length;
-  if (!confirm(`Delete "${editingBook.title}"?` + (n ? `\nIts ${plural(n, 'loan record')} will be deleted too.` : ''))) return;
+  if (!confirm(`Supprimer « ${editingBook.title} » ?` + (n ? `\n${n > 1 ? `Ses ${n} fiches de prêt seront aussi supprimées.` : 'Sa fiche de prêt sera aussi supprimée.'}` : ''))) return;
   db.books = db.books.filter((b) => b !== editingBook);
   db.loans = db.loans.filter((l) => l.bookId !== editingBook.id);
-  $('#dlg-book').close(); save(); toast('Book deleted');
+  $('#dlg-book').close(); save(); toast('Livre supprimé');
 });
 
-// ---------- loan dialog ----------
+// ---------- fenêtre prêt ----------
 let editingLoan = null;
 function openLoan(loanId, bookId) {
   editingLoan = loanId ? db.loans.find((l) => l.id === loanId) : null;
   const current = editingLoan?.bookId || bookId;
   const choices = db.books.filter((b) => b.id === current || !activeLoan(b.id)).sort(byTitle);
-  $('#l-book').innerHTML = `<option value="">— choose a book —</option>` +
+  $('#l-book').innerHTML = `<option value="">— choisir un livre —</option>` +
     choices.map((b) => `<option value="${b.id}">${esc(b.title)}${b.author ? ' — ' + esc(b.author) : ''}</option>`).join('') +
-    `<option value="__new">＋ A book not in the list yet…</option>`;
+    `<option value="__new">＋ Un livre qui n'est pas encore dans la liste…</option>`;
   $('#l-book').value = current || (choices.length ? '' : '__new');
   toggleNewBook();
   $('#people').innerHTML = people().map((p) => `<option value="${esc(p)}">`).join('');
-  $('#loan-dlg-title').textContent = editingLoan ? 'Edit loan record' : 'Lend a book';
+  $('#loan-dlg-title').textContent = editingLoan ? 'Modifier la fiche de prêt' : 'Prêter un livre';
   $('#l-person').value = editingLoan?.person || '';
   $('#l-out').value = editingLoan?.out || today();
   $('#l-due').value = editingLoan?.due || '';
@@ -414,12 +464,12 @@ $('#dlg-loan form').addEventListener('submit', (e) => {
   const other = db.loans.find((l) => l.bookId === bookId && !l.returned && l !== editingLoan);
   if (!returned && other) {
     e.preventDefault();
-    alert(`That book is already marked as lent to ${other.person}. Mark it returned first.`);
+    alert(`Ce livre est déjà prêté à ${other.person}. Marquez-le d'abord comme rendu.`);
     return;
   }
   if (returned && returned < $('#l-out').value) {
     e.preventDefault();
-    alert('The return date is before the date it was taken.');
+    alert("La date de retour est antérieure à la date d'emprunt.");
     return;
   }
   if (bookId === '__new') {
@@ -431,20 +481,20 @@ $('#dlg-loan form').addEventListener('submit', (e) => {
     returned, notes: $('#l-notes').value.trim(), updated: now() };
   if (editingLoan) Object.assign(editingLoan, data);
   else db.loans.push({ id: uid(), ...data });
-  save(); toast(editingLoan ? 'Record updated' : `Lent to ${data.person}`);
+  save(); toast(editingLoan ? 'Fiche modifiée' : `Prêté à ${data.person}`);
 });
 $('#l-delete').addEventListener('click', () => {
-  if (!confirm('Delete this loan record?')) return;
+  if (!confirm('Supprimer cette fiche de prêt ?')) return;
   db.loans = db.loans.filter((l) => l !== editingLoan);
-  $('#dlg-loan').close(); save(); toast('Record deleted');
+  $('#dlg-loan').close(); save(); toast('Fiche supprimée');
 });
 
-// ---------- return dialog ----------
+// ---------- fenêtre retour ----------
 let returningLoan = null;
 function openReturn(id) {
   returningLoan = db.loans.find((l) => l.id === id);
-  const b = bookById(returningLoan.bookId) || { title: '(deleted book)' };
-  $('#r-desc').textContent = `"${b.title}", lent to ${returningLoan.person} on ${fmt(returningLoan.out)}`;
+  const b = bookById(returningLoan.bookId) || { title: '(livre supprimé)' };
+  $('#r-desc').textContent = `« ${b.title} », prêté à ${returningLoan.person} le ${fmt(returningLoan.out)}`;
   $('#r-date').value = today();
   $('#r-date').min = returningLoan.out;
   $('#r-notes').value = returningLoan.notes || '';
@@ -452,27 +502,31 @@ function openReturn(id) {
 }
 $('#dlg-return form').addEventListener('submit', () => {
   Object.assign(returningLoan, { returned: $('#r-date').value, notes: $('#r-notes').value.trim(), updated: now() });
-  save(); toast('Marked as returned');
+  save(); toast('Marqué comme rendu');
 });
 
-// ---------- backup ----------
+// ---------- sauvegarde ----------
 function download(name, text, type) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], { type }));
   a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
+const fileTag = () => db.owner ? '-' + db.owner.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/gi, '-').toLowerCase() : '';
 $('#export-json').addEventListener('click', () => {
-  download(`book-register-${today()}.json`, JSON.stringify({ app: 'book-register', version: 1, exported: now(), ...db }, null, 2), 'application/json');
+  download(`registre-livres${fileTag()}-${today()}.json`, JSON.stringify({ app: 'book-register', version: 1, exported: now(), ...db }, null, 2), 'application/json');
 });
 $('#export-csv').addEventListener('click', () => {
+  // Séparateur « ; » : c'est ce qu'Excel attend en français.
   const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const rows = [['Title', 'Author', 'Borrower', 'Date taken', 'Expected back', 'Date returned', 'Notes']];
+  const rows = [];
+  if (db.owner) rows.push(['Propriétaire', db.owner], []);
+  rows.push(['Titre', 'Auteur', 'Emprunteur', "Date d'emprunt", 'Retour prévu', 'Date de retour', 'Notes']);
   db.loans.slice().sort((a, b) => a.out.localeCompare(b.out)).forEach((l) => {
     const b = bookById(l.bookId) || {};
     rows.push([b.title, b.author, l.person, l.out, l.due, l.returned, l.notes]);
   });
-  download(`book-register-history-${today()}.csv`, '﻿' + rows.map((r) => r.map(q).join(',')).join('\r\n'), 'text/csv');
+  download(`historique-prets${fileTag()}-${today()}.csv`, '﻿' + rows.map((r) => r.map(q).join(';')).join('\r\n'), 'text/csv');
 });
 let importMode = 'merge';
 $('#import-merge').addEventListener('click', () => { importMode = 'merge'; $('#import-file').click(); });
@@ -485,31 +539,36 @@ $('#import-file').addEventListener('change', async (e) => {
   try {
     data = JSON.parse(await file.text());
     if (!Array.isArray(data.books) || !Array.isArray(data.loans)) throw new Error();
-  } catch (err) { alert("That file isn't a Book Register backup."); return; }
+  } catch (err) { alert("Ce fichier n'est pas une sauvegarde du registre."); return; }
   if (importMode === 'replace') {
-    if (!confirm(`Replace everything on this device with ${plural(data.books.length, 'book')} and ${plural(data.loans.length, 'loan record')} from the file?`)) return;
-    db = { books: data.books, loans: data.loans };
+    if (!confirm(`Remplacer tout le contenu de cet appareil par ${plural(data.books.length, 'livre')} et ${plural(data.loans.length, 'fiche de prêt', 'fiches de prêt')} du fichier ?`)) return;
+    db = { owner: data.owner || '', ownerUpdated: data.ownerUpdated, books: data.books, loans: data.loans };
   } else {
     const merge = (mine, theirs) => {
       const map = new Map(mine.map((x) => [x.id, x]));
       theirs.forEach((x) => { const m = map.get(x.id); if (!m || (x.updated || '') > (m.updated || '')) map.set(x.id, x); });
       return [...map.values()];
     };
-    db = { books: merge(db.books, data.books), loans: merge(db.loans, data.loans) };
+    const theirsNewer = data.owner && (!db.owner || (data.ownerUpdated || '') > (db.ownerUpdated || ''));
+    db = {
+      owner: theirsNewer ? data.owner : db.owner,
+      ownerUpdated: theirsNewer ? data.ownerUpdated : db.ownerUpdated,
+      books: merge(db.books, data.books), loans: merge(db.loans, data.loans),
+    };
   }
-  save(); toast(importMode === 'replace' ? 'Backup restored' : 'Backup merged');
+  save(); toast(importMode === 'replace' ? 'Sauvegarde restaurée' : 'Sauvegarde fusionnée');
 });
 async function showStorageInfo() {
-  let msg = `This device holds ${plural(db.books.length, 'book')} and ${plural(db.loans.length, 'loan record')}.`;
+  let msg = `Cet appareil contient ${plural(db.books.length, 'livre')} et ${plural(db.loans.length, 'fiche de prêt', 'fiches de prêt')}.`;
   if (navigator.storage?.persisted) {
     msg += (await navigator.storage.persisted())
-      ? ' The browser has agreed to keep this data permanently.'
-      : " The browser hasn't promised to keep this data permanently. Install the app to the home screen and keep regular backups.";
+      ? ' Le navigateur a accepté de conserver ces données durablement.'
+      : " Le navigateur n'a pas garanti la conservation durable de ces données : installez l'application sur l'écran d'accueil et faites des sauvegardes régulières.";
   }
   $('#storage-info').textContent = msg;
 }
 
-// ---------- offline + persistence ----------
+// ---------- hors ligne + conservation ----------
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
 window.addEventListener('storage', (e) => { if (e.key === KEY) { db = load(); render(); } });

@@ -1,6 +1,6 @@
 // Serves the app from the cache so it opens with no connection,
 // and fetches a fresh copy in the background when online.
-const CACHE = 'book-register-v1';
+const CACHE = 'book-register-v2';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
