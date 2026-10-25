@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Book Register</title>
+<meta name="theme-color" content="#6b3f22">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Book Register">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --bg: #f6f1e7; --card: #fffdf8; --ink: #2b2119; --muted: #7d6e60;
+    --accent: #6b3f22; --accent-2: #8f5a34; --line: #e4d9c6;
+    --ok: #2f7a4b; --warn: #b8741a; --bad: #b3362c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1713; --card: #27201a; --ink: #f1e9dc; --muted: #a8998a;
+      --accent: #d39a68; --accent-2: #e2b088; --line: #3b3128;
+      --ok: #6cc48d; --warn: #e0a54d; --bad: #ef7d72;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--accent); color: #fff;
+    padding: calc(env(safe-area-inset-top) + 12px) 16px 12px; }
+  @media (prefers-color-scheme: dark) { header { background: #3a2617; } }
+  header h1 { margin: 0; font: 600 1.25rem/1.2 Georgia, "Times New Roman", serif; letter-spacing: .02em; }
+  header p { margin: 2px 0 0; font-size: .85rem; opacity: .85; }
+  main { max-width: 760px; margin: 0 auto; padding: 12px 12px 120px; }
+  section[hidden] { display: none; }
+  h2 { font: 600 1.05rem Georgia, serif; margin: 18px 4px 8px; color: var(--muted); }
+  .search { width: 100%; padding: 11px 14px; border: 1px solid var(--line); border-radius: 12px;
+    background: var(--card); color: var(--ink); font-size: 1rem; margin: 4px 0 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 12px 14px; margin-bottom: 10px; display: flex; gap: 12px; align-items: center; }
+  .card .info { flex: 1; min-width: 0; }
+  .title { font-weight: 600; overflow-wrap: anywhere; }
+  .sub { color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
+  .meta { font-size: .9rem; margin-top: 3px; }
+  .badge { display: inline-block; font-size: .75rem; font-weight: 600; padding: 2px 8px;
+    border-radius: 999px; border: 1px solid currentColor; margin-right: 6px; white-space: nowrap; }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  .actions { display: flex; flex-direction: column; gap: 6px; }
+  button { font: inherit; cursor: pointer; }
+  .btn { border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 10px;
+    padding: 8px 14px; font-weight: 600; white-space: nowrap; }
+  @media (prefers-color-scheme: dark) { .btn { color: #1c1713; } }
+  .btn.ghost { background: transparent; color: var(--accent); }
+  .btn.danger { background: transparent; color: var(--bad); border-color: var(--bad); }
+  .empty { text-align: center; color: var(--muted); padding: 40px 16px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 6px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px; text-align: center; }
+  .stat b { display: block; font-size: 1.4rem; color: var(--accent); }
+  .stat span { font-size: .8rem; color: var(--muted); }
+  #fab { position: fixed; right: 18px; bottom: calc(env(safe-area-inset-bottom) + 78px); z-index: 6;
+    width: 58px; height: 58px; border-radius: 50%; border: 0; background: var(--accent); color: #fff;
+    font-size: 2rem; line-height: 1; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+  @media (prefers-color-scheme: dark) { #fab { color: #1c1713; } }
+  #fab[hidden] { display: none; }
+  nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; background: var(--card);
+    border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
+  nav button { flex: 1; border: 0; background: none; color: var(--muted); padding: 10px 4px 12px;
+    font-size: .8rem; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  nav button .ico { font-size: 1.3rem; }
+  nav button[aria-current="true"] { color: var(--accent); font-weight: 700; }
+  dialog { border: 1px solid var(--line); border-radius: 16px; background: var(--card); color: var(--ink);
+    padding: 0; width: min(94vw, 480px); }
+  dialog::backdrop { background: rgba(0,0,0,.45); }
+  dialog form { padding: 18px; }
+  dialog h3 { margin: 0 0 12px; font: 600 1.15rem Georgia, serif; }
+  label { display: block; font-size: .85rem; color: var(--muted); margin: 10px 0 4px; }
+  input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--bg); color: var(--ink); font: inherit; }
+  textarea { min-height: 64px; resize: vertical; }
+  .row { display: flex; gap: 10px; } .row > div { flex: 1; }
+  .dlg-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
+  .dlg-actions .spacer { flex: 1; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .panel p { margin: 0 0 10px; color: var(--muted); font-size: .92rem; }
+  .panel .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  #toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 150px); transform: translateX(-50%);
+    background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: .9rem;
+    opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 20; }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📚 Book Register</h1>
+  <p id="summary"></p>
+</header>
+
+<main>
+  <section id="view-loans">
+    <div class="stats" id="stats"></div>
+    <h2>Currently lent out</h2>
+    <div id="loans-list"></div>
+  </section>
+
+  <section id="view-books" hidden>
+    <input class="search" id="books-search" type="search" placeholder="Search books by title or author…">
+    <div id="books-list"></div>
+  </section>
+
+  <section id="view-history" hidden>
+    <input class="search" id="history-search" type="search" placeholder="Search by book or person…">
+    <div id="history-list"></div>
+  </section>
+
+  <section id="view-backup" hidden>
+    <h2>Backup &amp; move data</h2>
+    <div class="panel">
+      <p>Your records are saved only on this device, inside this browser. Export a backup file from time to time,
+         and use it to copy your records between your phone and your PC.</p>
+      <div class="btns">
+        <button class="btn" id="export-json">Export backup</button>
+        <button class="btn ghost" id="export-csv">Export history as spreadsheet (CSV)</button>
+      </div>
+    </div>
+    <div class="panel">
+      <p><b>Merge</b> adds the records from a backup file to the ones already here; where the same record is in both,
+         the most recently changed version is kept. <b>Replace</b> wipes this device and loads the file instead.</p>
+      <div class="btns">
+        <button class="btn" id="import-merge">Merge from file</button>
+        <button class="btn danger" id="import-replace">Replace from file</button>
+      </div>
+      <input type="file" id="import-file" accept="application/json,.json" hidden>
+    </div>
+    <div class="panel">
+      <p id="storage-info">Checking storage…</p>
+    </div>
+  </section>
+</main>
+
+<button id="fab" aria-label="Add">+</button>
+
+<nav>
+  <button data-view="loans" aria-current="true"><span class="ico">📖</span>On loan</button>
+  <button data-view="books"><span class="ico">📚</span>Books</button>
+  <button data-view="history"><span class="ico">🕘</span>History</button>
+  <button data-view="backup"><span class="ico">💾</span>Backup</button>
+</nav>
+
+<!-- Add / edit a book -->
+<dialog id="dlg-book">
+  <form method="dialog">
+    <h3 id="book-dlg-title">Add a book</h3>
+    <label for="b-title">Title *</label>
+    <input id="b-title" required autocomplete="off">
+    <label for="b-author">Author</label>
+    <input id="b-author" autocomplete="off">
+    <label for="b-notes">Notes (edition, condition, where it came from…)</label>
+    <textarea id="b-notes"></textarea>
+    <div class="dlg-actions">
+      <button type="button" class="btn danger" id="b-delete" hidden>Delete</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn ghost" data-close>Cancel</button>
+      <button type="submit" class="btn" value="save">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Lend a book / edit a loan record -->
+<dialog id="dlg-loan">
+  <form method="dialog">
+    <h3 id="loan-dlg-title">Lend a book</h3>
+    <label for="l-book">Book *</label>
+    <select id="l-book" required></select>
+    <div id="l-newbook" hidden>
+      <label for="l-newtitle">New book title *</label>
+      <input id="l-newtitle" autocomplete="off">
+      <label for="l-newauthor">Author</label>
+      <input id="l-newauthor" autocomplete="off">
+    </div>
+    <label for="l-person">Who is taking it? *</label>
+    <input id="l-person" list="people" required autocomplete="off">
+    <datalist id="people"></datalist>
+    <div class="row">
+      <div><label for="l-out">Date taken *</label><input id="l-out" type="date" required></div>
+      <div><label for="l-due">Expected back (optional)</label><input id="l-due" type="date"></div>
+    </div>
+    <div id="l-returned-wrap" hidden>
+      <label for="l-returned">Date given back (leave empty if still out)</label>
+      <input id="l-returned" type="date">
+    </div>
+    <label for="l-notes">Notes</label>
+    <textarea id="l-notes"></textarea>
+    <div class="dlg-actions">
+      <button type="button" class="btn danger" id="l-delete" hidden>Delete record</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn ghost" data-close>Cancel</button>
+      <button type="submit" class="btn" value="save">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Mark as returned -->
+<dialog id="dlg-return">
+  <form method="dialog">
+    <h3>Book returned</h3>
+    <p id="r-desc" class="sub"></p>
+    <label for="r-date">Date given back *</label>
+    <input id="r-date" type="date" required>
+    <label for="r-notes">Notes (condition, etc.)</label>
+    <textarea id="r-notes"></textarea>
+    <div class="dlg-actions">
+      <button type="button" class="btn ghost" data-close>Cancel</button>
+      <button type="submit" class="btn" value="save">Mark returned</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+const KEY = 'book-register-v1';
+const $ = (s) => document.querySelector(s);
+
+// ---------- data ----------
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(KEY));
+    if (d && Array.isArray(d.books) && Array.isArray(d.loans)) return d;
+  } catch (e) {}
+  return { books: [], loans: [] };
+}
+let db = load();
+function save() { localStorage.setItem(KEY, JSON.stringify(db)); render(); }
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const now = () => new Date().toISOString();
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (d) => d ? new Date(d + 'T00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+const days = (a, b) => Math.round((new Date(b + 'T00:00') - new Date(a + 'T00:00')) / 864e5);
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+const bookById = (id) => db.books.find((b) => b.id === id);
+const activeLoan = (bookId) => db.loans.find((l) => l.bookId === bookId && !l.returned);
+const people = () => [...new Set(db.loans.map((l) => l.person))].sort((a, b) => a.localeCompare(b));
+const byTitle = (a, b) => a.title.localeCompare(b.title);
+
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ---------- navigation ----------
+let view = 'loans';
+document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => {
+  view = b.dataset.view;
+  document.querySelectorAll('nav button').forEach((x) => x.setAttribute('aria-current', x === b));
+  document.querySelectorAll('main > section').forEach((s) => s.hidden = s.id !== 'view-' + view);
+  render();
+  window.scrollTo(0, 0);
+}));
+$('#fab').addEventListener('click', () => view === 'books' ? openBook() : openLoan());
+document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
+$('#books-search').addEventListener('input', render);
+$('#history-search').addEventListener('input', render);
+
+// ---------- rendering ----------
+function loanStatus(l) {
+  if (l.returned) return `<span class="badge ok">Returned</span>`;
+  if (l.due && l.due < today()) return `<span class="badge bad">Overdue ${plural(days(l.due, today()), 'day')}</span>`;
+  return `<span class="badge warn">Out ${plural(days(l.out, today()), 'day')}</span>`;
+}
+
+function render() {
+  const out = db.loans.filter((l) => !l.returned);
+  const overdue = out.filter((l) => l.due && l.due < today());
+  $('#summary').textContent = `${plural(db.books.length, 'book')} · ${out.length} lent out` + (overdue.length ? ` · ${overdue.length} overdue` : '');
+  $('#fab').hidden = view === 'backup';
+
+  if (view === 'loans') {
+    $('#stats').innerHTML = `
+      <div class="stat"><b>${db.books.length - out.length}</b><span>on the shelf</span></div>
+      <div class="stat"><b>${out.length}</b><span>lent out</span></div>
+      <div class="stat"><b>${people().length}</b><span>borrowers</span></div>`;
+    const list = out.slice().sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999') || a.out.localeCompare(b.out));
+    $('#loans-list').innerHTML = list.length ? list.map((l) => {
+      const b = bookById(l.bookId) || { title: '(deleted book)' };
+      return `<div class="card">
+        <div class="info">
+          <div class="title">${esc(b.title)}</div>
+          ${b.author ? `<div class="sub">${esc(b.author)}</div>` : ''}
+          <div class="meta">${loanStatus(l)}<b>${esc(l.person)}</b> since ${fmt(l.out)}${l.due ? ` · back by ${fmt(l.due)}` : ''}</div>
+        </div>
+        <div class="actions"><button class="btn" data-return="${l.id}">Returned</button></div>
+      </div>`;
+    }).join('') : `<div class="empty">No books are lent out right now.<br>Tap <b>+</b> to record a loan.</div>`;
+  }
+
+  if (view === 'books') {
+    const q = $('#books-search').value.trim().toLowerCase();
+    const list = db.books.filter((b) => !q || (b.title + ' ' + (b.author || '')).toLowerCase().includes(q)).sort(byTitle);
+    $('#books-list').innerHTML = list.length ? list.map((b) => {
+      const l = activeLoan(b.id);
+      const count = db.loans.filter((x) => x.bookId === b.id).length;
+      return `<div class="card">
+        <div class="info">
+          <div class="title">${esc(b.title)}</div>
+          ${b.author ? `<div class="sub">${esc(b.author)}</div>` : ''}
+          <div class="meta">${l ? `${loanStatus(l)}with <b>${esc(l.person)}</b>` : `<span class="badge ok">On the shelf</span>`}
+            <span class="sub">${count ? `· lent ${plural(count, 'time')}` : ''}</span></div>
+        </div>
+        <div class="actions">
+          ${l ? `<button class="btn" data-return="${l.id}">Returned</button>` : `<button class="btn" data-lend="${b.id}">Lend</button>`}
+          <button class="btn ghost" data-edit-book="${b.id}">Edit</button>
+        </div>
+      </div>`;
+    }).join('') : `<div class="empty">${q ? 'No matching books.' : 'Your shelf is empty.<br>Tap <b>+</b> to add your first book.'}</div>`;
+  }
+
+  if (view === 'history') {
+    const q = $('#history-search').value.trim().toLowerCase();
+    const list = db.loans.filter((l) => {
+      const b = bookById(l.bookId) || {};
+      return !q || [b.title, b.author, l.person].join(' ').toLowerCase().includes(q);
+    }).sort((a, b) => b.out.localeCompare(a.out));
+    $('#history-list').innerHTML = list.length ? list.map((l) => {
+      const b = bookById(l.bookId) || { title: '(deleted book)' };
+      const span = l.returned ? ` → ${fmt(l.returned)} (${plural(days(l.out, l.returned), 'day')})` : ' → still out';
+      return `<div class="card">
+        <div class="info">
+          <div class="title">${esc(b.title)}</div>
+          <div class="meta">${loanStatus(l)}<b>${esc(l.person)}</b></div>
+          <div class="sub">${fmt(l.out)}${span}</div>
+          ${l.notes ? `<div class="sub">📝 ${esc(l.notes)}</div>` : ''}
+        </div>
+        <div class="actions"><button class="btn ghost" data-edit-loan="${l.id}">Edit</button></div>
+      </div>`;
+    }).join('') : `<div class="empty">${q ? 'No matching records.' : 'No loans recorded yet.'}</div>`;
+  }
+
+  if (view === 'backup') showStorageInfo();
+}
+
+document.body.addEventListener('click', (e) => {
+  const t = e.target.closest('button');
+  if (!t) return;
+  if (t.dataset.return) openReturn(t.dataset.return);
+  else if (t.dataset.lend) openLoan(null, t.dataset.lend);
+  else if (t.dataset.editBook) openBook(t.dataset.editBook);
+  else if (t.dataset.editLoan) openLoan(t.dataset.editLoan);
+});
+
+// ---------- book dialog ----------
+let editingBook = null;
+function openBook(id) {
+  editingBook = id ? bookById(id) : null;
+  $('#book-dlg-title').textContent = editingBook ? 'Edit book' : 'Add a book';
+  $('#b-title').value = editingBook?.title || '';
+  $('#b-author').value = editingBook?.author || '';
+  $('#b-notes').value = editingBook?.notes || '';
+  $('#b-delete').hidden = !editingBook;
+  $('#dlg-book').showModal();
+}
+$('#dlg-book form').addEventListener('submit', () => {
+  const data = { title: $('#b-title').value.trim(), author: $('#b-author').value.trim(), notes: $('#b-notes').value.trim(), updated: now() };
+  if (!data.title) return;
+  if (editingBook) Object.assign(editingBook, data);
+  else db.books.push({ id: uid(), added: today(), ...data });
+  save(); toast(editingBook ? 'Book updated' : 'Book added');
+});
+$('#b-delete').addEventListener('click', () => {
+  const n = db.loans.filter((l) => l.bookId === editingBook.id).length;
+  if (!confirm(`Delete "${editingBook.title}"?` + (n ? `\nIts ${plural(n, 'loan record')} will be deleted too.` : ''))) return;
+  db.books = db.books.filter((b) => b !== editingBook);
+  db.loans = db.loans.filter((l) => l.bookId !== editingBook.id);
+  $('#dlg-book').close(); save(); toast('Book deleted');
+});
+
+// ---------- loan dialog ----------
+let editingLoan = null;
+function openLoan(loanId, bookId) {
+  editingLoan = loanId ? db.loans.find((l) => l.id === loanId) : null;
+  const current = editingLoan?.bookId || bookId;
+  const choices = db.books.filter((b) => b.id === current || !activeLoan(b.id)).sort(byTitle);
+  $('#l-book').innerHTML = `<option value="">— choose a book —</option>` +
+    choices.map((b) => `<option value="${b.id}">${esc(b.title)}${b.author ? ' — ' + esc(b.author) : ''}</option>`).join('') +
+    `<option value="__new">＋ A book not in the list yet…</option>`;
+  $('#l-book').value = current || (choices.length ? '' : '__new');
+  toggleNewBook();
+  $('#people').innerHTML = people().map((p) => `<option value="${esc(p)}">`).join('');
+  $('#loan-dlg-title').textContent = editingLoan ? 'Edit loan record' : 'Lend a book';
+  $('#l-person').value = editingLoan?.person || '';
+  $('#l-out').value = editingLoan?.out || today();
+  $('#l-due').value = editingLoan?.due || '';
+  $('#l-returned').value = editingLoan?.returned || '';
+  $('#l-notes').value = editingLoan?.notes || '';
+  $('#l-returned-wrap').hidden = !editingLoan;
+  $('#l-delete').hidden = !editingLoan;
+  $('#dlg-loan').showModal();
+}
+function toggleNewBook() {
+  const isNew = $('#l-book').value === '__new';
+  $('#l-newbook').hidden = !isNew;
+  $('#l-newtitle').required = isNew;
+}
+$('#l-book').addEventListener('change', toggleNewBook);
+$('#dlg-loan form').addEventListener('submit', (e) => {
+  let bookId = $('#l-book').value;
+  const returned = editingLoan ? $('#l-returned').value : '';
+  const other = db.loans.find((l) => l.bookId === bookId && !l.returned && l !== editingLoan);
+  if (!returned && other) {
+    e.preventDefault();
+    alert(`That book is already marked as lent to ${other.person}. Mark it returned first.`);
+    return;
+  }
+  if (returned && returned < $('#l-out').value) {
+    e.preventDefault();
+    alert('The return date is before the date it was taken.');
+    return;
+  }
+  if (bookId === '__new') {
+    const b = { id: uid(), added: today(), title: $('#l-newtitle').value.trim(), author: $('#l-newauthor').value.trim(), notes: '', updated: now() };
+    db.books.push(b); bookId = b.id;
+    $('#l-newtitle').value = ''; $('#l-newauthor').value = '';
+  }
+  const data = { bookId, person: $('#l-person').value.trim(), out: $('#l-out').value, due: $('#l-due').value,
+    returned, notes: $('#l-notes').value.trim(), updated: now() };
+  if (editingLoan) Object.assign(editingLoan, data);
+  else db.loans.push({ id: uid(), ...data });
+  save(); toast(editingLoan ? 'Record updated' : `Lent to ${data.person}`);
+});
+$('#l-delete').addEventListener('click', () => {
+  if (!confirm('Delete this loan record?')) return;
+  db.loans = db.loans.filter((l) => l !== editingLoan);
+  $('#dlg-loan').close(); save(); toast('Record deleted');
+});
+
+// ---------- return dialog ----------
+let returningLoan = null;
+function openReturn(id) {
+  returningLoan = db.loans.find((l) => l.id === id);
+  const b = bookById(returningLoan.bookId) || { title: '(deleted book)' };
+  $('#r-desc').textContent = `"${b.title}", lent to ${returningLoan.person} on ${fmt(returningLoan.out)}`;
+  $('#r-date').value = today();
+  $('#r-date').min = returningLoan.out;
+  $('#r-notes').value = returningLoan.notes || '';
+  $('#dlg-return').showModal();
+}
+$('#dlg-return form').addEventListener('submit', () => {
+  Object.assign(returningLoan, { returned: $('#r-date').value, notes: $('#r-notes').value.trim(), updated: now() });
+  save(); toast('Marked as returned');
+});
+
+// ---------- backup ----------
+function download(name, text, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+$('#export-json').addEventListener('click', () => {
+  download(`book-register-${today()}.json`, JSON.stringify({ app: 'book-register', version: 1, exported: now(), ...db }, null, 2), 'application/json');
+});
+$('#export-csv').addEventListener('click', () => {
+  const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const rows = [['Title', 'Author', 'Borrower', 'Date taken', 'Expected back', 'Date returned', 'Notes']];
+  db.loans.slice().sort((a, b) => a.out.localeCompare(b.out)).forEach((l) => {
+    const b = bookById(l.bookId) || {};
+    rows.push([b.title, b.author, l.person, l.out, l.due, l.returned, l.notes]);
+  });
+  download(`book-register-history-${today()}.csv`, '﻿' + rows.map((r) => r.map(q).join(',')).join('\r\n'), 'text/csv');
+});
+let importMode = 'merge';
+$('#import-merge').addEventListener('click', () => { importMode = 'merge'; $('#import-file').click(); });
+$('#import-replace').addEventListener('click', () => { importMode = 'replace'; $('#import-file').click(); });
+$('#import-file').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+    if (!Array.isArray(data.books) || !Array.isArray(data.loans)) throw new Error();
+  } catch (err) { alert("That file isn't a Book Register backup."); return; }
+  if (importMode === 'replace') {
+    if (!confirm(`Replace everything on this device with ${plural(data.books.length, 'book')} and ${plural(data.loans.length, 'loan record')} from the file?`)) return;
+    db = { books: data.books, loans: data.loans };
+  } else {
+    const merge = (mine, theirs) => {
+      const map = new Map(mine.map((x) => [x.id, x]));
+      theirs.forEach((x) => { const m = map.get(x.id); if (!m || (x.updated || '') > (m.updated || '')) map.set(x.id, x); });
+      return [...map.values()];
+    };
+    db = { books: merge(db.books, data.books), loans: merge(db.loans, data.loans) };
+  }
+  save(); toast(importMode === 'replace' ? 'Backup restored' : 'Backup merged');
+});
+async function showStorageInfo() {
+  let msg = `This device holds ${plural(db.books.length, 'book')} and ${plural(db.loans.length, 'loan record')}.`;
+  if (navigator.storage?.persisted) {
+    msg += (await navigator.storage.persisted())
+      ? ' The browser has agreed to keep this data permanently.'
+      : " The browser hasn't promised to keep this data permanently. Install the app to the home screen and keep regular backups.";
+  }
+  $('#storage-info').textContent = msg;
+}
+
+// ---------- offline + persistence ----------
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
+window.addEventListener('storage', (e) => { if (e.key === KEY) { db = load(); render(); } });
+
+render();
+</script>
+</body>
+</html>
