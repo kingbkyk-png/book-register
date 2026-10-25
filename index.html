@@ -85,6 +85,32 @@
   .panel .btns { display: flex; gap: 8px; flex-wrap: wrap; }
   .panel.welcome { border-color: var(--accent); }
   .panel.welcome p { color: var(--ink); }
+  .chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 10px; scrollbar-width: none; }
+  .chip { flex: none; border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    border-radius: 999px; padding: 6px 12px; font-size: .85rem; white-space: nowrap; }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  @media (prefers-color-scheme: dark) { .chip[aria-pressed="true"] { color: #1c1713; } }
+  .badge.cat { color: var(--muted); border-color: var(--line); background: var(--bg); }
+  .summary-text { color: var(--muted); font-size: .88rem; margin-top: 4px; display: -webkit-box;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .rating { display: flex; flex-wrap: wrap; gap: 4px; }
+  .rating button { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--ink); font-weight: 600; padding: 0; }
+  .rating button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  @media (prefers-color-scheme: dark) { .rating button[aria-pressed="true"] { color: #1c1713; } }
+  .rating .clear { width: auto; padding: 0 10px; font-weight: 400; color: var(--muted); }
+  .stats.four { grid-template-columns: repeat(2, 1fr); }
+  @media (min-width: 560px) { .stats.four { grid-template-columns: repeat(4, 1fr); } }
+  .bars { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 6px 14px; margin-bottom: 6px; }
+  .bar-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 8px 0; }
+  .bar-row + .bar-row { border-top: 1px solid var(--line); }
+  .bar-label { font-weight: 600; font-size: .92rem; overflow-wrap: anywhere; }
+  .bar-label .sub { font-weight: 400; }
+  .bar-value { font-size: .9rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bar-track { grid-column: 1 / -1; height: 8px; }
+  .bar { height: 100%; min-width: 4px; background: var(--accent); border-radius: 0 4px 4px 0; }
+  .bar-row:hover .bar { background: var(--accent-2); }
+  .hint { color: var(--muted); font-size: .85rem; margin: 0 4px 8px; }
   #toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 150px); transform: translateX(-50%);
     background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: .9rem;
     opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 20; }
@@ -109,8 +135,13 @@
   </section>
 
   <section id="view-books" hidden>
-    <input class="search" id="books-search" type="search" placeholder="Rechercher un titre ou un auteur…">
+    <input class="search" id="books-search" type="search" placeholder="Rechercher un titre, un auteur, une catégorie…">
+    <div class="chips" id="cat-chips"></div>
     <div id="books-list"></div>
+  </section>
+
+  <section id="view-stats" hidden>
+    <div id="stats-content"></div>
   </section>
 
   <section id="view-history" hidden>
@@ -154,6 +185,7 @@
   <button data-view="loans" aria-current="true"><span class="ico">📖</span>En prêt</button>
   <button data-view="books"><span class="ico">📚</span>Livres</button>
   <button data-view="history"><span class="ico">🕘</span>Historique</button>
+  <button data-view="stats"><span class="ico">📊</span>Stats</button>
   <button data-view="settings"><span class="ico">⚙️</span>Réglages</button>
 </nav>
 
@@ -179,6 +211,11 @@
     <input id="b-title" required autocomplete="off">
     <label for="b-author">Auteur</label>
     <input id="b-author" autocomplete="off">
+    <label for="b-category">Catégorie</label>
+    <input id="b-category" list="categories" autocomplete="off" placeholder="ex. : Roman, Policier, Histoire…">
+    <datalist id="categories"></datalist>
+    <label for="b-summary">Résumé</label>
+    <textarea id="b-summary" rows="4" placeholder="De quoi parle ce livre ?"></textarea>
     <label for="b-notes">Notes (édition, état, provenance…)</label>
     <textarea id="b-notes"></textarea>
     <div class="dlg-actions">
@@ -212,6 +249,8 @@
     <div id="l-returned-wrap" hidden>
       <label for="l-returned">Date de retour (laisser vide s'il n'est pas encore rendu)</label>
       <input id="l-returned" type="date">
+      <label>Appréciation de l'emprunteur (1 = pas aimé, 10 = adoré)</label>
+      <div class="rating" id="l-rating"></div>
     </div>
     <label for="l-notes">Notes</label>
     <textarea id="l-notes"></textarea>
@@ -231,7 +270,9 @@
     <p id="r-desc" class="sub"></p>
     <label for="r-date">Date de retour *</label>
     <input id="r-date" type="date" required>
-    <label for="r-notes">Notes (état, etc.)</label>
+    <label>Appréciation de l'emprunteur (1 = pas aimé, 10 = adoré)</label>
+    <div class="rating" id="r-rating"></div>
+    <label for="r-notes">Notes (état, avis, etc.)</label>
     <textarea id="r-notes"></textarea>
     <div class="dlg-actions">
       <button type="button" class="btn ghost" data-close>Annuler</button>
@@ -273,6 +314,13 @@ const bookById = (id) => db.books.find((b) => b.id === id);
 const activeLoan = (bookId) => db.loans.find((l) => l.bookId === bookId && !l.returned);
 const people = () => [...new Set(db.loans.map((l) => l.person))].sort((a, b) => a.localeCompare(b, 'fr'));
 const byTitle = (a, b) => a.title.localeCompare(b.title, 'fr');
+const NO_CAT = 'Sans catégorie';
+const DEFAULT_CATS = ['Roman', 'Policier / Thriller', 'Science-fiction', 'Fantasy', 'Histoire', 'Biographie', 'Essai',
+  'Poésie', 'Théâtre', 'Jeunesse', 'Bande dessinée', 'Religion / Spiritualité', 'Développement personnel', 'Sciences', 'Cuisine'];
+const usedCats = () => [...new Set(db.books.map((b) => b.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr'));
+const catOf = (b) => (b && b.category) || NO_CAT;
+const num = (x) => x.toLocaleString('fr-FR', { maximumFractionDigits: 1 });
+const avg = (a) => a.reduce((s, x) => s + x, 0) / a.length;
 // « de Marc » mais « d'Anne »
 const deName = (name) => (/^[aeiouyàâäéèêëîïôöùûü]/i.test(name) ? "d'" : 'de ') + name;
 
@@ -295,6 +343,28 @@ $('#fab').addEventListener('click', () => view === 'books' ? openBook() : openLo
 $('#header').addEventListener('click', openOwner);
 document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
 $('#books-search').addEventListener('input', render);
+let catFilter = null;
+$('#cat-chips').addEventListener('click', (e) => {
+  const c = e.target.closest('.chip');
+  if (c) { catFilter = c.dataset.cat || null; render(); }
+});
+
+// ---------- note de 1 à 10 ----------
+function setupRating(el) {
+  el.innerHTML = Array.from({ length: 10 }, (_, i) => `<button type="button" data-r="${i + 1}" aria-pressed="false">${i + 1}</button>`).join('') +
+    `<button type="button" class="clear" data-r="">Sans note</button>`;
+  el.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (b) setRating(el, b.dataset.r ? Number(b.dataset.r) : null);
+  });
+}
+function setRating(el, v) {
+  el.dataset.value = v ?? '';
+  el.querySelectorAll('button[data-r]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.r !== '' && Number(b.dataset.r) === v)));
+}
+const getRating = (el) => el.dataset.value ? Number(el.dataset.value) : null;
+setupRating($('#l-rating'));
+setupRating($('#r-rating'));
 $('#history-search').addEventListener('input', render);
 
 // ---------- affichage ----------
@@ -311,7 +381,7 @@ function render() {
   $('#heading').textContent = '📚 ' + heading;
   document.title = heading;
   $('#summary').textContent = `${plural(db.books.length, 'livre')} · ${plural(out.length, 'prêté')}` + (overdue.length ? ` · ${overdue.length} en retard` : '');
-  $('#fab').hidden = view === 'settings';
+  $('#fab').hidden = view === 'settings' || view === 'stats';
 
   if (view === 'loans') {
     $('#welcome').hidden = !!db.owner;
@@ -335,7 +405,16 @@ function render() {
 
   if (view === 'books') {
     const q = $('#books-search').value.trim().toLowerCase();
-    const list = db.books.filter((b) => !q || (b.title + ' ' + (b.author || '')).toLowerCase().includes(q)).sort(byTitle);
+    const cats = usedCats();
+    if (catFilter && catFilter !== NO_CAT && !cats.includes(catFilter)) catFilter = null;
+    const noCatCount = db.books.filter((b) => !b.category).length;
+    const chip = (value, label, n) => `<button class="chip" data-cat="${esc(value)}" aria-pressed="${(catFilter || '') === value}">${esc(label)} · ${n}</button>`;
+    $('#cat-chips').hidden = !cats.length;
+    $('#cat-chips').innerHTML = chip('', 'Toutes', db.books.length) +
+      cats.map((c) => chip(c, c, db.books.filter((b) => b.category === c).length)).join('') +
+      (noCatCount && cats.length ? chip(NO_CAT, NO_CAT, noCatCount) : '');
+    const list = db.books.filter((b) => (!catFilter || catOf(b) === catFilter) &&
+      (!q || [b.title, b.author, b.category].join(' ').toLowerCase().includes(q))).sort(byTitle);
     $('#books-list').innerHTML = list.length ? list.map((b) => {
       const l = activeLoan(b.id);
       const count = db.loans.filter((x) => x.bookId === b.id).length;
@@ -343,15 +422,16 @@ function render() {
         <div class="info">
           <div class="title">${esc(b.title)}</div>
           ${b.author ? `<div class="sub">${esc(b.author)}</div>` : ''}
-          <div class="meta">${l ? `${loanStatus(l)}chez <b>${esc(l.person)}</b>` : `<span class="badge ok">Sur l'étagère</span>`}
+          <div class="meta">${b.category ? `<span class="badge cat">${esc(b.category)}</span>` : ''}${l ? `${loanStatus(l)}chez <b>${esc(l.person)}</b>` : `<span class="badge ok">Sur l'étagère</span>`}
             <span class="sub">${count ? `· prêté ${count} fois` : ''}</span></div>
+          ${b.summary ? `<div class="summary-text">${esc(b.summary)}</div>` : ''}
         </div>
         <div class="actions">
           ${l ? `<button class="btn" data-return="${l.id}">Rendu</button>` : `<button class="btn" data-lend="${b.id}">Prêter</button>`}
           <button class="btn ghost" data-edit-book="${b.id}">Modifier</button>
         </div>
       </div>`;
-    }).join('') : `<div class="empty">${q ? 'Aucun livre trouvé.' : 'Votre étagère est vide.<br>Touchez <b>+</b> pour ajouter votre premier livre.'}</div>`;
+    }).join('') : `<div class="empty">${q || catFilter ? 'Aucun livre trouvé.' :'Votre étagère est vide.<br>Touchez <b>+</b> pour ajouter votre premier livre.'}</div>`;
   }
 
   if (view === 'history') {
@@ -367,7 +447,7 @@ function render() {
         <div class="info">
           <div class="title">${esc(b.title)}</div>
           <div class="meta">${loanStatus(l)}<b>${esc(l.person)}</b></div>
-          <div class="sub">${fmt(l.out)}${span}</div>
+          <div class="sub">${fmt(l.out)}${span}${l.rating ? ` · ⭐ ${l.rating}/10` : ''}</div>
           ${l.notes ? `<div class="sub">📝 ${esc(l.notes)}</div>` : ''}
         </div>
         <div class="actions"><button class="btn ghost" data-edit-loan="${l.id}">Modifier</button></div>
@@ -375,12 +455,95 @@ function render() {
     }).join('') : `<div class="empty">${q ? 'Aucune fiche trouvée.' : "Aucun prêt enregistré pour l'instant."}</div>`;
   }
 
+  if (view === 'stats') renderStats();
+
   if (view === 'settings') {
     $('#owner-info').innerHTML = db.owner
       ? `Ce registre appartient à <b>${esc(db.owner)}</b>.`
       : "Aucun nom n'est indiqué pour l'instant.";
     showStorageInfo();
   }
+}
+
+// ---------- statistiques ----------
+// Regroupe les prêts par clé (livre, catégorie, personne) et calcule nombre, durée moyenne et note moyenne.
+function groupLoans(keyOf) {
+  const groups = new Map();
+  db.loans.forEach((l) => {
+    const k = keyOf(l);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(l);
+  });
+  return [...groups].map(([key, loans]) => {
+    const durations = loans.filter((l) => l.returned).map((l) => days(l.out, l.returned));
+    const ratings = loans.filter((l) => l.rating).map((l) => l.rating);
+    return { key, count: loans.length,
+      avgDays: durations.length ? avg(durations) : null, returnedCount: durations.length,
+      avgRating: ratings.length ? avg(ratings) : null, ratedCount: ratings.length };
+  });
+}
+
+// Une liste classée avec une barre horizontale par ligne. max = valeur qui remplit toute la barre.
+function barList(rows, max) {
+  if (!rows.length) return `<p class="hint">Pas encore assez de données.</p>`;
+  return `<div class="bars">${rows.map((r) => `
+    <div class="bar-row" title="${esc(r.tip || '')}">
+      <div class="bar-label">${esc(r.label)}${r.sub ? ` <span class="sub">${esc(r.sub)}</span>` : ''}</div>
+      <div class="bar-value">${r.text}</div>
+      <div class="bar-track"><div class="bar" style="width:${Math.max(0, Math.min(100, (r.value / max) * 100))}%"></div></div>
+    </div>`).join('')}</div>`;
+}
+
+function renderStats() {
+  if (!db.loans.length) {
+    $('#stats-content').innerHTML = `<div class="empty">Les statistiques apparaîtront dès que vous aurez enregistré vos premiers prêts.</div>`;
+    return;
+  }
+  const title = (id) => (bookById(id) || { title: '(livre supprimé)' }).title;
+  const returned = db.loans.filter((l) => l.returned);
+  const rated = db.loans.filter((l) => l.rating);
+  const lentIds = new Set(db.loans.map((l) => l.bookId));
+  const neverLent = db.books.filter((b) => !lentIds.has(b.id)).length;
+  const byBook = groupLoans((l) => l.bookId);
+  const jours = (d) => `${num(d)} ${d >= 2 ? 'jours' : 'jour'}`;
+
+  const mostLent = byBook.slice().sort((a, b) => b.count - a.count || title(a.key).localeCompare(title(b.key), 'fr')).slice(0, 10);
+  const slowest = byBook.filter((g) => g.avgDays !== null).sort((a, b) => b.avgDays - a.avgDays).slice(0, 10);
+  const bestRated = byBook.filter((g) => g.avgRating !== null).sort((a, b) => b.avgRating - a.avgRating || b.ratedCount - a.ratedCount).slice(0, 10);
+  const byCat = groupLoans((l) => catOf(bookById(l.bookId))).sort((a, b) => b.count - a.count);
+  const byPerson = groupLoans((l) => l.person).sort((a, b) => b.count - a.count).slice(0, 10);
+  const maxDays = Math.max(1, ...slowest.map((g) => g.avgDays));
+
+  $('#stats-content').innerHTML = `
+    <div class="stats four">
+      <div class="stat"><b>${db.loans.length}</b><span>${db.loans.length > 1 ? 'prêts au total' : 'prêt au total'}</span></div>
+      <div class="stat"><b>${returned.length ? num(avg(returned.map((l) => days(l.out, l.returned)))) : '—'}</b><span>jours en moyenne avant le retour</span></div>
+      <div class="stat"><b>${rated.length ? num(avg(rated.map((l) => l.rating))) : '—'}</b><span>note moyenne sur 10</span></div>
+      <div class="stat"><b>${neverLent}</b><span>${neverLent > 1 ? 'livres jamais prêtés' : 'livre jamais prêté'}</span></div>
+    </div>
+
+    <h2>📚 Les livres les plus prêtés</h2>
+    ${barList(mostLent.map((g) => ({ label: title(g.key), value: g.count, text: plural(g.count, 'prêt'),
+      tip: `${title(g.key)} : prêté ${g.count} fois` })), Math.max(...mostLent.map((g) => g.count)))}
+
+    <h2>⏳ Temps moyen avant le retour</h2>
+    <p class="hint">Les livres qui mettent le plus de temps à revenir, en premier. Seuls les prêts rendus sont comptés.</p>
+    ${barList(slowest.map((g) => ({ label: title(g.key), sub: `(${plural(g.returnedCount, 'retour')})`, value: g.avgDays, text: jours(g.avgDays),
+      tip: `${title(g.key)} : ${jours(g.avgDays)} en moyenne sur ${plural(g.returnedCount, 'retour')}` })), maxDays)}
+
+    <h2>⭐ Les livres les plus appréciés</h2>
+    <p class="hint">Moyenne des notes de 1 à 10 données au retour.</p>
+    ${barList(bestRated.map((g) => ({ label: title(g.key), sub: `(${plural(g.ratedCount, 'note')})`, value: g.avgRating, text: `${num(g.avgRating)}/10`,
+      tip: `${title(g.key)} : ${num(g.avgRating)}/10 sur ${plural(g.ratedCount, 'note')}` })), 10)}
+
+    <h2>🏷️ Prêts par catégorie</h2>
+    ${barList(byCat.map((g) => ({ label: g.key, value: g.count, text: plural(g.count, 'prêt'),
+      tip: `${g.key} : ${plural(g.count, 'prêt')}${g.avgRating !== null ? `, note moyenne ${num(g.avgRating)}/10` : ''}` })), Math.max(...byCat.map((g) => g.count)))}
+
+    <h2>👥 Emprunteurs</h2>
+    ${barList(byPerson.map((g) => ({ label: g.key, sub: g.avgDays !== null ? `· rend en ${jours(g.avgDays)} en moyenne` : '', value: g.count, text: plural(g.count, 'prêt'),
+      tip: `${g.key} : ${plural(g.count, 'prêt')}` })), Math.max(...byPerson.map((g) => g.count)))}
+  `;
 }
 
 document.body.addEventListener('click', (e) => {
@@ -411,12 +574,19 @@ function openBook(id) {
   $('#book-dlg-title').textContent = editingBook ? 'Modifier le livre' : 'Ajouter un livre';
   $('#b-title').value = editingBook?.title || '';
   $('#b-author').value = editingBook?.author || '';
+  $('#b-category').value = editingBook?.category || '';
+  $('#b-summary').value = editingBook?.summary || '';
+  $('#categories').innerHTML = [...new Set([...usedCats(), ...DEFAULT_CATS])].map((c) => `<option value="${esc(c)}">`).join('');
   $('#b-notes').value = editingBook?.notes || '';
   $('#b-delete').hidden = !editingBook;
   $('#dlg-book').showModal();
 }
 $('#dlg-book form').addEventListener('submit', () => {
-  const data = { title: $('#b-title').value.trim(), author: $('#b-author').value.trim(), notes: $('#b-notes').value.trim(), updated: now() };
+  // Réutilise l'orthographe d'une catégorie existante (« roman » → « Roman »).
+  let category = $('#b-category').value.trim();
+  category = [...usedCats(), ...DEFAULT_CATS].find((c) => c.toLowerCase() === category.toLowerCase()) || category;
+  const data = { title: $('#b-title').value.trim(), author: $('#b-author').value.trim(), category,
+    summary: $('#b-summary').value.trim(), notes: $('#b-notes').value.trim(), updated: now() };
   if (!data.title) return;
   if (editingBook) Object.assign(editingBook, data);
   else db.books.push({ id: uid(), added: today(), ...data });
@@ -448,6 +618,7 @@ function openLoan(loanId, bookId) {
   $('#l-due').value = editingLoan?.due || '';
   $('#l-returned').value = editingLoan?.returned || '';
   $('#l-notes').value = editingLoan?.notes || '';
+  setRating($('#l-rating'), editingLoan?.rating || null);
   $('#l-returned-wrap').hidden = !editingLoan;
   $('#l-delete').hidden = !editingLoan;
   $('#dlg-loan').showModal();
@@ -478,7 +649,7 @@ $('#dlg-loan form').addEventListener('submit', (e) => {
     $('#l-newtitle').value = ''; $('#l-newauthor').value = '';
   }
   const data = { bookId, person: $('#l-person').value.trim(), out: $('#l-out').value, due: $('#l-due').value,
-    returned, notes: $('#l-notes').value.trim(), updated: now() };
+    returned, rating: editingLoan ? getRating($('#l-rating')) : null, notes: $('#l-notes').value.trim(), updated: now() };
   if (editingLoan) Object.assign(editingLoan, data);
   else db.loans.push({ id: uid(), ...data });
   save(); toast(editingLoan ? 'Fiche modifiée' : `Prêté à ${data.person}`);
@@ -498,10 +669,11 @@ function openReturn(id) {
   $('#r-date').value = today();
   $('#r-date').min = returningLoan.out;
   $('#r-notes').value = returningLoan.notes || '';
+  setRating($('#r-rating'), returningLoan.rating || null);
   $('#dlg-return').showModal();
 }
 $('#dlg-return form').addEventListener('submit', () => {
-  Object.assign(returningLoan, { returned: $('#r-date').value, notes: $('#r-notes').value.trim(), updated: now() });
+  Object.assign(returningLoan, { returned: $('#r-date').value, rating: getRating($('#r-rating')), notes: $('#r-notes').value.trim(), updated: now() });
   save(); toast('Marqué comme rendu');
 });
 
@@ -521,10 +693,10 @@ $('#export-csv').addEventListener('click', () => {
   const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const rows = [];
   if (db.owner) rows.push(['Propriétaire', db.owner], []);
-  rows.push(['Titre', 'Auteur', 'Emprunteur', "Date d'emprunt", 'Retour prévu', 'Date de retour', 'Notes']);
+  rows.push(['Titre', 'Auteur', 'Catégorie', 'Emprunteur', "Date d'emprunt", 'Retour prévu', 'Date de retour', 'Jours', 'Note /10', 'Notes']);
   db.loans.slice().sort((a, b) => a.out.localeCompare(b.out)).forEach((l) => {
     const b = bookById(l.bookId) || {};
-    rows.push([b.title, b.author, l.person, l.out, l.due, l.returned, l.notes]);
+    rows.push([b.title, b.author, b.category, l.person, l.out, l.due, l.returned, l.returned ? days(l.out, l.returned) : '', l.rating, l.notes]);
   });
   download(`historique-prets${fileTag()}-${today()}.csv`, '﻿' + rows.map((r) => r.map(q).join(';')).join('\r\n'), 'text/csv');
 });
